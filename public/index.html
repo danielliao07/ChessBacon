@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chess Bacon</title>
+</head>
+<body>
+    <h1>Chess Bacon</h1>
+    <input id="player1" type="text" placeholder="Player 1" />
+    <input id="player2" type="text" placeholder="Player 2" />
+    <button onclick="search()">Search</button>
+    <p id="result"></p>
+ 
+    <script>
+        async function search() {
+            const player1 = document.getElementById("player1").value;
+            const player2 = document.getElementById("player2").value;
+            document.getElementById("result").textContent = "Searching...";
+ 
+            const res = await fetch(`/search?player1=${player1}&player2=${player2}`);
+            const data = await res.json();
+ 
+            if (data.path) {
+                document.getElementById("result").textContent = data.path.join(" → ") + ` (${data.path.length - 1} degrees)`;
+            } else {
+                document.getElementById("result").textContent = "No connection found.";
+            }
+        }
+    </script>
+</body>
+</html>
+ 
