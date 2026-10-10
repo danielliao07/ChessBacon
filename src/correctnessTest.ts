@@ -21,5 +21,5 @@ for (const pair of testPairs) {
     const slowResult = await slowFindPath(pair[0],pair[1]);
     const regResult = await findPath(pair[0],pair[1]);
     console.log('pair tested:',pair);
-    console.log('length of single dir:', slowResult?.length, 'length of double dir:', regResult?.length);
+    console.log('length of single dir:', slowResult?.length, 'length of double dir:', regResult?.path.length);
 }

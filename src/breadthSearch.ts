@@ -3,13 +3,22 @@ import { getOpponents } from "./api.js";
 type playerWithPath = {
         player:string
         path:Array<string>
+        gameUrlPath:Array<string>
     };
+
+type searchResult = {
+        path:string[]
+        playersSearched:number
+        gameUrlPath:Array<string>
+    };
+
 async function expandSearchOneStep (
     queue: Array<playerWithPath>,
-    movingVisitedMap: Map<string,Array<string>>,
-    goalVisitedMap: Map<string,Array<string>>,
-    maxDepth: number = 6
-):Promise<string[] | null> {
+    movingVisitedMap: Map<string,playerWithPath>,
+    goalVisitedMap: Map<string,playerWithPath>,
+    maxDepth: number = 6,
+    monthsBack:number = 3,
+):Promise<playerWithPath | null> {
     const current = queue.shift();
     if (!current) return null; //make sure its not undefined, which it never will be
 
@@ -22,19 +31,24 @@ async function expandSearchOneStep (
     }
 
     //now we do stuff
-    const currentOpps = await getOpponents(current.player); //dont forget theres a months param as well
-    for (const currentOpp of currentOpps) {
+    const currentOpps = await getOpponents(current.player, monthsBack); //dont forget theres a months param as well
+    for (const [currentOpp, gameUrl] of currentOpps) {
         if (goalVisitedMap.has(currentOpp)) { //check if moving side has hit someone in the goal pool
-            const goalPath = goalVisitedMap.get(currentOpp)!;
-            const reversedGoalPath = [...goalPath].reverse()
+            const goalEntry = goalVisitedMap.get(currentOpp)!;
+            const reversedGoalPath = [...goalEntry.path].reverse()
+            const reversedGoalUrls = [...goalEntry.gameUrlPath].reverse()
             console.log("current.path:", current.path);
-console.log("goalPath:", goalPath);
-console.log("combined:", [...current.path, ...reversedGoalPath]);
-            return [...current.path, ...reversedGoalPath];
+            console.log("goalPath:", goalEntry.path);
+            console.log("combined:", [...current.path, ...reversedGoalPath]);
+            return {
+                    player: currentOpp,
+                    path: [...current.path, ...reversedGoalPath],
+                    gameUrlPath: [...current.gameUrlPath, gameUrl, ...reversedGoalUrls]
+                };
         } else {
             if (!movingVisitedMap.has(currentOpp)) { //so check if the moving side has already covered the user
-                    let newPlayerWithPath:playerWithPath = {player:currentOpp,path:[...current.path,currentOpp]};
-                    movingVisitedMap.set(currentOpp,newPlayerWithPath.path);
+                    let newPlayerWithPath:playerWithPath = {player:currentOpp, path:[...current.path,currentOpp], gameUrlPath:[...current.gameUrlPath, gameUrl]};
+                    movingVisitedMap.set(currentOpp,newPlayerWithPath);
                     queue.push(newPlayerWithPath);
             }
         }
@@ -45,23 +59,25 @@ console.log("combined:", [...current.path, ...reversedGoalPath]);
 export async function findPath(
     start:string,
     target:string,
-): Promise<Array<string> | null> {
+    maxDepth: number = 6,
+    monthsBack:number = 3,
+): Promise<searchResult | null> {
     if (start === target) {
-        return [target];
+        return {path: [start], playersSearched: 0, gameUrlPath:[]};
     }
-    let forwardQueue: Array<playerWithPath> = [{player:start,path:[start]}];
-    let backwardQueue: Array<playerWithPath> = [{player:target,path:[target]}];
-    let forwardVisited: Map<string,Array<string>> = new Map([[start,[start]]]);
-    let backwardVisited: Map<string,Array<string>> = new Map([[target,[target]]]);
+    let forwardQueue: Array<playerWithPath> = [{player:start, path:[start], gameUrlPath:[]}];
+    let backwardQueue: Array<playerWithPath> = [{player:target, path:[target], gameUrlPath:[]}];
+    let forwardVisited: Map<string,playerWithPath> = new Map([[start, {player:start, path:[start], gameUrlPath:[]}]]);
+    let backwardVisited: Map<string,playerWithPath> = new Map([[target, {player:target, path:[target], gameUrlPath:[]}]]);
 
     while (forwardQueue.length != 0 || backwardQueue.length != 0) {
-        const forwardResult = await expandSearchOneStep(forwardQueue,forwardVisited,backwardVisited);
+        const forwardResult = await expandSearchOneStep(forwardQueue,forwardVisited,backwardVisited, maxDepth, monthsBack);
         if (forwardResult) {
-            return forwardResult;
+            return { path: forwardResult.path, gameUrlPath: forwardResult.gameUrlPath, playersSearched: forwardVisited.size + backwardVisited.size };
         }
-        const backwardResult = await expandSearchOneStep(backwardQueue, backwardVisited,forwardVisited);
+        const backwardResult = await expandSearchOneStep(backwardQueue, backwardVisited,forwardVisited, maxDepth, monthsBack);
         if (backwardResult) {
-            return backwardResult;
+            return { path: backwardResult.path, gameUrlPath: backwardResult.gameUrlPath, playersSearched: forwardVisited.size + backwardVisited.size };
         }
     }
     

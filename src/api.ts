@@ -3,6 +3,7 @@ type Game = {
   white: { username: string }
   black: { username: string }
   time_class: string
+  url : string
 }
 
 export async function playerExists (username:string): Promise<boolean> {
@@ -38,8 +39,8 @@ export async function getOpponents(
   username: string,
   monthsBack: number = 3,
   time_class: string = "blitz"
-): Promise<Set<string>> {
-  const opponents = new Set<string>() // Set automatically removes duplicates
+): Promise<Map<string, string>> {
+  const opponents = new Map<string, string>() // Map value automatically removes duplicates, in this case value is url and key is username, both unique
   const now = new Date()
 
   for (let i = 0; i < monthsBack; i++) {
@@ -57,7 +58,7 @@ export async function getOpponents(
       const white = game.white.username.toLowerCase()
       const black = game.black.username.toLowerCase()
       const opponent = white === username.toLowerCase() ? black : white
-      opponents.add(opponent)
+      opponents.set(opponent, game.url)
     }
 
     //wait 500ms between requests

@@ -10,18 +10,30 @@
     <input id="player2" type="text" placeholder="Player 2" />
     <button onclick="search()">Search</button>
     <p id="result"></p>
+    <p id="playersSearched"></p>
+    <h2>Settings</h2>
+    <input id="maxDepth" type="text" placeholder="Search Depth">
+    <input id="monthsBack" type="text" placeholder="Months Back">
  
     <script>
         async function search() {
             const player1 = document.getElementById("player1").value;
             const player2 = document.getElementById("player2").value;
+            const maxDepth = document.getElementById("maxDepth").value;
+            const monthsBack = document.getElementById("monthsBack").value;
+            
             document.getElementById("result").textContent = "Searching...";
  
-            const res = await fetch(`/search?player1=${player1}&player2=${player2}`);
+            const res = await fetch(`/search?player1=${player1}&player2=${player2}&maxDepth=${maxDepth}&monthsBack=${monthsBack}`);
             const data = await res.json();
+
+            document.getElementById("playersSearched").textContent = `Players searched: ${data.playersSearched}`;
  
             if (data.path) {
+                const links = data.gameUrlPath.map((url, i) =>
+                `<a href="${url}" target="_blank">${data.path[i]} → ${data.path[i+1]}</a>`).join(", ");
                 document.getElementById("result").textContent = data.path.join(" → ") + ` (${data.path.length - 1} degrees)`;
+                document.getElementById("result").innerHTML += `<br>Games: ${links}`;
             } else {
                 document.getElementById("result").textContent = "No connection found.";
             }
